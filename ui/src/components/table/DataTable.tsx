@@ -5,6 +5,7 @@ import { ChevronUp, ChevronDown, Pin, PinOff, Calculator, BarChart2, SlidersHori
 import { useAppStore } from "../../store/appStore";
 import { useFilters } from "../../hooks/useFilters";
 import { useStats } from "../../hooks/useStats";
+import { useAutoSave } from "../../hooks/useAutoSave";
 import { FilterPanel } from "./FilterPanel";
 import { useFocusTrap } from "../../hooks/useFocusTrap";
 import { RecordDetailsModal } from "../modals/RecordDetailsModal";
@@ -34,8 +35,15 @@ export function DataTable({ tabId }: { tabId: string }) {
     const tab = useAppStore((s) => s.tabs.find((t) => t.id === tabId))!;
     const ui = useAppStore((s) => s.tabUi[tabId])!;
     const updateTabUi = useAppStore((s) => s.updateTabUi);
+    const startEditing = useAppStore((s) => s.startEditing);
+    const confirmEdit = useAppStore((s) => s. confirmEdit);
+    const cancelEditing = useAppStore((s) => s.cancelEditing);
+
     const { applyFilters, getUniqueValues } = useFilters(tabId);
     const { loadStats } = useStats(tabId);
+    
+    // Feature: Auto-Save
+    useAutoSave(tabId);
 
     const [ctxMenu, setCtxMenu] = useState<ContextMenu | null>(null);
     const [filterPanel, setFilterPanel] = useState<FilterPanelState | null>(null);
@@ -240,14 +248,54 @@ export function DataTable({ tabId }: { tabId: string }) {
                                     >
                                         {frozenCols.map((c) => {
                                             const val = getCellValue(c, idx);
+                                            const isEditing = ui.editingCell?.rowIndex === idx && ui.editingCell?.colName === c;
+                                            const isEdited = !!ui.editedCells[`${idx}-${c}`];
+                                            
                                             return (
                                                 <div
                                                     key={c}
-                                                    className={`table-cell ${isNumericCell(val) ? "numeric" : ""} ${val === "" ? "null-val" : ""}`}
-                                                    style={{ width: COL_WIDTH, minWidth: COL_WIDTH }}
-                                                    title={val || "null"}
+                                                    className={`table-cell ${isNumericCell(val) && !isEditing ? "numeric" : ""} ${val === "" && !isEditing ? "null-val" : ""}`}
+                                                    style={{ 
+                                                        width: COL_WIDTH, 
+                                                        minWidth: COL_WIDTH,
+                                                        borderLeft: isEdited ? "2px solid var(--color-brand)" : undefined
+                                                    }}
+                                                    title={isEditing ? undefined : (val || "null")}
+                                                    onDoubleClick={() => {
+                                                        if (!isCalcCol(c)) startEditing(tabId, idx, c);
+                                                    }}
                                                 >
-                                                    {val || <em>null</em>}
+                                                    {isEditing ? (
+                                                        <input
+                                                            className="inline-edit-input"
+                                                            type="text"
+                                                            defaultValue={val}
+                                                            autoFocus
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === "Enter") {
+                                                                    confirmEdit(tabId, idx, c, e.currentTarget.value);
+                                                                } else if (e.key === "Escape") {
+                                                                    cancelEditing(tabId);
+                                                                }
+                                                            }}
+                                                            onBlur={(e) => {
+                                                                confirmEdit(tabId, idx, c, e.target.value);
+                                                            }}
+                                                            style={{
+                                                                width: "100%",
+                                                                height: "100%",
+                                                                backgroundColor: "var(--color-surface)",
+                                                                border: "none",
+                                                                outline: "2px solid var(--color-brand)",
+                                                                borderRadius: "var(--radius-sm)",
+                                                                fontSize: "var(--font-size-sm)",
+                                                                color: "var(--color-text-primary)",
+                                                                padding: "0 var(--table-cell-px)"
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        val || <em>null</em>
+                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -283,14 +331,54 @@ export function DataTable({ tabId }: { tabId: string }) {
                                 >
                                     {unfrozenCols.map((c) => {
                                         const val = getCellValue(c, idx);
+                                        const isEditing = ui.editingCell?.rowIndex === idx && ui.editingCell?.colName === c;
+                                        const isEdited = !!ui.editedCells[`${idx}-${c}`];
+
                                         return (
                                             <div
                                                 key={c}
-                                                className={`table-cell ${isNumericCell(val) ? "numeric" : ""} ${val === "" ? "null-val" : ""}`}
-                                                style={{ width: COL_WIDTH, minWidth: COL_WIDTH }}
-                                                title={val || "null"}
+                                                className={`table-cell ${isNumericCell(val) && !isEditing ? "numeric" : ""} ${val === "" && !isEditing ? "null-val" : ""}`}
+                                                style={{ 
+                                                    width: COL_WIDTH, 
+                                                    minWidth: COL_WIDTH,
+                                                    borderLeft: isEdited ? "2px solid var(--color-brand)" : undefined
+                                                }}
+                                                title={isEditing ? undefined : (val || "null")}
+                                                onDoubleClick={() => {
+                                                    if (!isCalcCol(c)) startEditing(tabId, idx, c);
+                                                }}
                                             >
-                                                {val || <em>null</em>}
+                                                {isEditing ? (
+                                                    <input
+                                                        className="inline-edit-input"
+                                                        type="text"
+                                                        defaultValue={val}
+                                                        autoFocus
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === "Enter") {
+                                                                confirmEdit(tabId, idx, c, e.currentTarget.value);
+                                                            } else if (e.key === "Escape") {
+                                                                cancelEditing(tabId);
+                                                            }
+                                                        }}
+                                                        onBlur={(e) => {
+                                                            confirmEdit(tabId, idx, c, e.target.value);
+                                                        }}
+                                                        style={{
+                                                            width: "100%",
+                                                            height: "100%",
+                                                            backgroundColor: "var(--color-surface)",
+                                                            border: "none",
+                                                            outline: "2px solid var(--color-brand)",
+                                                            borderRadius: "var(--radius-sm)",
+                                                            fontSize: "var(--font-size-sm)",
+                                                            color: "var(--color-text-primary)",
+                                                            padding: "0 var(--table-cell-px)"
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    val || <em>null</em>
+                                                )}
                                             </div>
                                         );
                                     })}

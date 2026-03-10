@@ -92,6 +92,7 @@ pub async fn p2p_fetch(link: String, state: State<'_, P2pState>) -> Result<Loade
     Ok(LoadedTab {
         id: uuid::Uuid::new_v4().to_string(),
         name,
+        path: String::new(),
         columns,
         records,
         total_rows,

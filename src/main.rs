@@ -48,6 +48,7 @@ fn main() {
             commands::get_app_info,
             commands::open_file_dialog,
             commands::load_file,
+            commands::save_file,
             commands::apply_filters,
             commands::get_unique_values,
             commands::get_column_stats,

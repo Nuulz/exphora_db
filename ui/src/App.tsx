@@ -39,6 +39,7 @@ export default function App() {
         const handler = (e: KeyboardEvent) => {
             const el = document.activeElement as HTMLElement;
             const isInput = el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+            const isInlineEdit = el?.classList.contains("inline-edit-input");
 
             if (e.key === "Escape") {
                 setShowSettings(false);
@@ -52,10 +53,31 @@ export default function App() {
                 return;
             }
 
-            if (isInput) return;
+            if (isInput && !isInlineEdit) return;
 
             if (e.ctrlKey || e.metaKey) {
                 const key = e.key.toLowerCase();
+
+                // Undo / Redo
+                if (key === "z") {
+                    if (isInput && !isInlineEdit) return; // Normally shouldn't trigger, but double check
+                    if (e.shiftKey) {
+                        if (activeTabId) useAppStore.getState().redoEdit(activeTabId);
+                    } else {
+                        if (activeTabId) useAppStore.getState().undoEdit(activeTabId);
+                    }
+                    e.preventDefault();
+                    return;
+                } else if (key === "x") {
+                    // Check if document.activeElement is .inline-edit-input
+                    if (isInlineEdit) {
+                        // Let it cut native text, do not preventDefault
+                        return;
+                    }
+                    if (activeTabId) useAppStore.getState().redoEdit(activeTabId);
+                    e.preventDefault();
+                    return;
+                }
 
                 // Tabs Navigation
                 if (key === "tab") {

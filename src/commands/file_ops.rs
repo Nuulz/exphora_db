@@ -12,6 +12,7 @@ use tauri_plugin_dialog::DialogExt;
 pub struct LoadedTab {
     pub id: String,
     pub name: String,
+    pub path: String,
     pub columns: Vec<String>,
     pub records: Vec<JsonRecord>,
     pub total_rows: usize,
@@ -82,6 +83,7 @@ pub fn load_file(path: String) -> Result<Vec<LoadedTab>, String> {
                     LoadedTab {
                         id: uuid::Uuid::new_v4().to_string(),
                         name: format!("{stem}/{table_name}"),
+                        path: path.clone(),
                         columns,
                         records,
                         total_rows,
@@ -112,6 +114,7 @@ pub fn load_file(path: String) -> Result<Vec<LoadedTab>, String> {
             Ok(vec![LoadedTab {
                 id: uuid::Uuid::new_v4().to_string(),
                 name: stem,
+                path,
                 columns,
                 records,
                 total_rows,
@@ -147,4 +150,53 @@ pub fn compute_unique_values_impl(
     pairs.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
     pairs.truncate(max_unique);
     pairs
+}
+
+/// Feature: Continuous auto-save directly to JSON or CSV.
+#[tauri::command]
+pub async fn save_file(
+    path: String,
+    format: String,
+    records: Vec<JsonRecord>,
+) -> Result<(), String> {
+    match format.as_str() {
+        "json" => {
+            let json = serde_json::to_string_pretty(&records).map_err(|e| e.to_string())?;
+            std::fs::write(&path, json).map_err(|e| e.to_string())?;
+        }
+        "csv" => {
+            if records.is_empty() {
+                std::fs::write(&path, "").map_err(|e| e.to_string())?;
+                return Ok(());
+            }
+            
+            let mut wtr = csv::Writer::from_path(&path).map_err(|e| e.to_string())?;
+            
+            // Get headers from first record
+            let first = records[0]
+                .as_object()
+                .ok_or_else(|| "The first record is not a valid JSON object.".to_string())?;
+            
+            let headers: Vec<String> = first.keys().cloned().collect();
+            // Optional: Sort headers if consistent ordering is needed, but we'll use original iteration order here
+
+            wtr.write_record(&headers).map_err(|e| e.to_string())?;
+            
+            for rec in &records {
+                let obj = rec.as_object().unwrap_or(first); // Fallback to first structure layout safely
+                let mut row = Vec::with_capacity(headers.len());
+                for h in &headers {
+                    let val = obj
+                        .get(h)
+                        .map(|v| crate::models::val_to_str(v))
+                        .unwrap_or_default();
+                    row.push(val);
+                }
+                wtr.write_record(&row).map_err(|e| e.to_string())?;
+            }
+            wtr.flush().map_err(|e| e.to_string())?;
+        }
+        _ => return Err("Format not supported for auto-save.".to_string()),
+    }
+    Ok(())
 }

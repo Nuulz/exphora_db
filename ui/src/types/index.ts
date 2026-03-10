@@ -3,6 +3,7 @@
 export interface LoadedTab {
     id: string;
     name: string;
+    path?: string;
     columns: string[];
     records: Record<string, unknown>[];
     total_rows: number;
@@ -90,6 +91,15 @@ export interface TabUiState {
     activeStats: ColumnStats | null;
     showFrequencyChart: boolean;
     frequencyChartCol: string | null;
+
+    // Feature: Inline Editing
+    editingCell: { rowIndex: number; colName: string } | null;
+    editHistory: {
+        past: Array<{ rowIndex: number; colName: string; oldValue: string; newValue: string }>;
+        future: Array<{ rowIndex: number; colName: string; oldValue: string; newValue: string }>;
+    };
+    saveStatus: 'idle' | 'saving' | 'saved' | 'error';
+    editedCells: Record<string, boolean>; // key format: `${rowIndex}-${colName}`
 }
 
 export function defaultTabUiState(tab: LoadedTab): TabUiState {
@@ -114,5 +124,9 @@ export function defaultTabUiState(tab: LoadedTab): TabUiState {
         activeStats: null,
         showFrequencyChart: false,
         frequencyChartCol: null,
+        editingCell: null,
+        editHistory: { past: [], future: [] },
+        saveStatus: 'idle',
+        editedCells: {},
     };
 }

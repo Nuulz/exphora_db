@@ -8,6 +8,9 @@ import {
     Moon,
     Settings,
     Share2,
+    Check,
+    AlertCircle,
+    Loader2
 } from "lucide-react";
 import { AppInfo } from "../../types";
 import { useAppStore } from "../../store/appStore";
@@ -124,6 +127,30 @@ export function TopBar({ onToggleSettings, onToggleP2P }: TopBarProps) {
 
             {/* Spacer */}
             <div className="flex-1" />
+
+            {/* Save Status Output */}
+            {activeTabId && tabUi?.saveStatus && tabUi.saveStatus !== 'idle' && (
+                <div className="flex items-center gap-1.5 mr-2 text-xs">
+                    {tabUi.saveStatus === 'saving' && (
+                        <>
+                            <Loader2 size={13} className="animate-spin text-zinc-500" />
+                            <span className="text-zinc-500">Saving...</span>
+                        </>
+                    )}
+                    {tabUi.saveStatus === 'saved' && (
+                        <>
+                            <Check size={13} className="text-emerald-500" />
+                            <span className="text-emerald-500">Saved</span>
+                        </>
+                    )}
+                    {tabUi.saveStatus === 'error' && (
+                        <>
+                            <AlertCircle size={13} className="text-rose-500" />
+                            <span className="text-rose-500">Save failed</span>
+                        </>
+                    )}
+                </div>
+            )}
 
             {/* Global search */}
             {activeTabId && (

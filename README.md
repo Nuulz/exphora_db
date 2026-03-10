@@ -3,7 +3,7 @@
 A fast, lightweight dataset viewer and explorer for your desktop.
 Open your data, filter it, analyze it, share it — no cloud required.
 
-![Version](https://img.shields.io/badge/version-v0.6.2-blue)
+![Version](https://img.shields.io/badge/version-v0.6.3-purple)
 ![Platform](https://img.shields.io/badge/platform-Windows_11_Pro-lightgrey)
 
 ---
@@ -49,7 +49,7 @@ Native OS integration via Tauri. Handles file I/O, schema inference
 **`ui/src/` — React frontend**
 Modular SPA split into:
 - `components/` — virtualized tables, sidebars, modals, overlays, charts
-- `hooks/` — `useDataset`, `useFilters`, `useFocusTrap` and more
+- `hooks/` — `useDataset`, `useFilters`, `useFocusTrap`, `useAutoSave` and more
 - `store/` — global tab state via Zustand (`appStore.ts`)
 
 ---
@@ -88,6 +88,12 @@ Full keyboard navigation. Mouse optional.
 | `Ctrl + Shift + G` | Open column picker — Frequency chart |
 | `Ctrl + Shift + C` | Clear all active filters instantly |
 | `Ctrl + E` | Open export dialog |
+| `Double click` | Edit cell inline |
+| `Enter` | Confirm cell edit |
+| `Escape` | Cancel cell edit |
+| `Ctrl + Z` | Undo last edit |
+| `Ctrl + X` | Redo last undone edit |
+
 
 ### App
 
