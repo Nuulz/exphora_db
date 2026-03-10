@@ -3,7 +3,7 @@
 A fast, lightweight dataset viewer and explorer for your desktop.
 Open your data, filter it, analyze it, share it — no cloud required.
 
-![Version](https://img.shields.io/badge/version-v0.6.3-purple)
+![Version](https://img.shields.io/badge/version-v0.7.1-purple)
 ![Platform](https://img.shields.io/badge/platform-Windows_11_Pro-lightgrey)
 
 ---
@@ -27,6 +27,7 @@ Open, explore and export all of these:
 
 | Format | Extensions |
 | :--- | :--- |
+| Exphora Views | `.exh` |
 | JSON | `.json` |
 | JSON Lines / NDJSON | `.jsonl`, `.ndjson` |
 | CSV | `.csv` |
@@ -34,6 +35,8 @@ Open, explore and export all of these:
 | SQLite | `.db`, `.sqlite`, `.sqlite3` |
 
 Export to: CSV, JSON, Excel, Markdown, PDF.
+
+*(**Pro tip**: the new `.exh` format acts as a saved workspace for your session, preserving filter configs, customized column widths and visibility, dataset paths, and even dedicated **markdown notes** mapped exactly to your view.)*
 
 ---
 
