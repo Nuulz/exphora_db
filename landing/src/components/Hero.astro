@@ -1,0 +1,73 @@
+---
+// src/components/Hero.astro
+const { BASE_URL } = import.meta.env;
+---
+<section class="relative min-h-screen flex items-center justify-center overflow-hidden px-6 pt-[56px]">
+  <!-- Decorative background -->
+  <div class="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
+    <div class="absolute w-[800px] h-[800px] bg-brand rounded-full blur-[150px] opacity-[0.12]"></div>
+    <div class="absolute inset-0 opacity-[0.05]" style={`background-image: url('${BASE_URL}/bg-grid.svg')`}></div>
+  </div>
+
+  <div class="relative z-10 flex flex-col items-center text-center max-w-4xl mx-auto">
+    <!-- Badge -->
+    <a href="https://github.com/Nuulz/Exphora_db/releases/tag/v0.6.2" target="_blank" rel="noopener noreferrer" class="hero-anim-badge inline-flex items-center justify-center px-4 py-1 mb-8 text-[12px] font-medium text-brand bg-brand-subtle border border-border-strong rounded-full hover:bg-surface-elevated transition-colors opacity-0 translate-y-[-10px]">
+      v0.6.2 — Now available
+    </a>
+
+    <!-- H1 -->
+    <h1 class="hero-anim-h1 text-[clamp(2.5rem,6vw,4.5rem)] font-extrabold leading-tight text-text-primary mb-6 opacity-0 translate-y-[20px] tracking-tight">
+      Explore your data.<br />
+      <span class="text-brand">No cloud required.</span>
+    </h1>
+
+    <!-- Subtitle -->
+    <p class="hero-anim-subtitle text-lg text-text-secondary max-w-[560px] mx-auto mb-10 opacity-0 translate-y-[20px] leading-relaxed">
+      A fast, lightweight desktop app for exploring and analyzing structured datasets. Open JSON, CSV, SQLite, XML and more — filter, search, export and share P2P.
+    </p>
+
+    <!-- Buttons -->
+    <div class="hero-anim-buttons flex flex-col sm:flex-row items-center gap-4 mb-4 opacity-0 translate-y-[20px] w-full sm:w-auto">
+      <a href="https://github.com/Nuulz/Exphora_db/releases" id="hero-download-btn" class="flex items-center justify-center h-[44px] px-6 bg-brand text-white font-medium rounded-md hover:bg-brand-hover transition-colors w-full sm:w-auto">
+        Download for Windows
+      </a>
+      <a href="https://github.com/Nuulz/Exphora_db" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center h-[44px] px-6 bg-transparent border border-border-strong text-text-secondary font-medium rounded-md hover:bg-surface-hover hover:text-text-primary transition-colors w-full sm:w-auto">
+        View on GitHub
+      </a>
+    </div>
+
+    <!-- Tech Stack -->
+    <div class="hero-anim-buttons flex items-center justify-center gap-2 text-[12px] text-text-muted mt-2 opacity-0 translate-y-[20px]">
+      Built with Rust &middot; Tauri v2 &middot; React 19
+    </div>
+  </div>
+</section>
+
+<script>
+  import { animate } from 'motion';
+
+  // Only animate if user prefers motion
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (!prefersReducedMotion) {
+    animate('.hero-anim-badge', { opacity: 1, y: 0 }, { duration: 0.5, delay: 0, ease: 'easeOut' });
+    animate('.hero-anim-h1', { opacity: 1, y: 0 }, { duration: 0.5, delay: 0.1, ease: 'easeOut' });
+    animate('.hero-anim-subtitle', { opacity: 1, y: 0 }, { duration: 0.5, delay: 0.2, ease: 'easeOut' });
+    animate('.hero-anim-buttons', { opacity: 1, y: 0 }, { duration: 0.5, delay: 0.3, ease: 'easeOut' });
+
+    // Pulse animation for the primary download button
+    animate('#hero-download-btn', 
+      { scale: [1, 1.03, 1] }, 
+      { duration: 2, repeat: Infinity, ease: 'easeInOut' }
+    );
+  } else {
+    // If reduced motion, remove initial inline transforms/opacity
+    const elements = document.querySelectorAll('.hero-anim-badge, .hero-anim-h1, .hero-anim-subtitle, .hero-anim-buttons');
+    elements.forEach(el => {
+      if (el instanceof HTMLElement) {
+        el.style.opacity = '1';
+        el.style.transform = 'none';
+      }
+    });
+  }
+</script>

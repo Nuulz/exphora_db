@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+:root {
+  --color-bg:               #0d0d0f;
+  --color-surface:          #1a1820;
+  --color-surface-elevated: #211f2a;
+  --color-surface-hover:    #2a2735;
+  --color-border:           #302d3f;
+  --color-border-strong:    #443f58;
+  --color-text-primary:     #ebe8f4;
+  --color-text-secondary:   #a09ab8;
+  --color-text-muted:       #65607a;
+  --color-brand:            #9d6ef7;
+  --color-brand-hover:      #b48afb;
+  --color-brand-subtle:     #1e1a35;
+  --shadow-custom-lg:       0 8px 24px rgba(0,0,0,0.55);
+}
+
+@theme {
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-surface-elevated: var(--color-surface-elevated);
+  --color-surface-hover: var(--color-surface-hover);
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-brand: var(--color-brand);
+  --color-brand-hover: var(--color-brand-hover);
+  --color-brand-subtle: var(--color-brand-subtle);
+  --shadow-lg: var(--shadow-custom-lg);
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

@@ -1,0 +1,36 @@
+---
+// src/components/Navbar.astro
+---
+<header id="navbar" class="fixed top-0 w-full h-[56px] z-50 transition-all duration-300 bg-transparent flex items-center justify-between px-6 lg:px-8 border-b border-transparent">
+  <div class="flex items-center gap-2">
+    <a href="#" class="text-text-primary font-bold text-lg tracking-tight">
+      <span class="text-brand">E</span>xphora DB
+    </a>
+  </div>
+  <nav class="flex items-center gap-6 text-sm font-medium">
+    <a href="https://github.com/Nuulz/Exphora_db" target="_blank" rel="noopener noreferrer" class="text-text-secondary hover:text-text-primary transition-colors">
+      GitHub
+    </a>
+    <a href="https://github.com/Nuulz/Exphora_db/releases" class="text-text-secondary hover:text-text-primary transition-colors">
+      Download
+    </a>
+  </nav>
+</header>
+
+<script>
+  const navbar = document.getElementById('navbar');
+  if (navbar) {
+    const onScroll = () => {
+      if (window.scrollY > 10) {
+        navbar.classList.add('bg-surface/80', 'backdrop-blur-md', '!border-border');
+        navbar.classList.remove('bg-transparent', 'border-transparent');
+      } else {
+        navbar.classList.remove('bg-surface/80', 'backdrop-blur-md', '!border-border');
+        navbar.classList.add('bg-transparent', 'border-transparent');
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    // Run once to initialize correctly on reload
+    onScroll();
+  }
+</script>

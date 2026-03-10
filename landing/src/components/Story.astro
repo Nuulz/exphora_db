@@ -1,0 +1,114 @@
+---
+// src/components/Story.astro
+---
+<section id="story" class="py-24 px-6 max-w-6xl mx-auto">
+  <div class="story-container">
+    
+    <!-- Bloque 1 — Header de sección -->
+    <div class="story-header text-center mb-16 opacity-0 translate-y-[20px]">
+      <span class="block text-xs text-brand uppercase tracking-[0.1em] font-semibold mb-3">
+        The story behind it
+      </span>
+      <h2 class="text-[2rem] font-bold text-text-primary">
+        Built because nothing else did the job
+      </h2>
+    </div>
+
+    <!-- Bloque 2 — Tres párrafos -->
+    <div class="story-content max-w-[640px] mx-auto text-base text-text-secondary leading-[1.75] mb-20">
+      <p class="story-p opacity-0 translate-y-[20px] mb-6">
+        Every time I needed to open a JSON dump, a database export or an API response, the options were always the same: drag it into Excel and watch it struggle, paste it into some online tool and hope your data isn't stored somewhere, or spin up a Jupyter notebook just to do a simple filter. None of that felt right.
+      </p>
+      <p class="story-p opacity-0 translate-y-[20px] mb-6">
+        There are database GUIs. There are JSON viewers. There are spreadsheet apps. But nothing that just opens any structured file, lets you filter it properly, and keeps your data on your machine. That gap is why ExphoraDB exists.
+      </p>
+      <p class="story-p opacity-0 translate-y-[20px]">
+        Built for people who work with real data — pentesting reports, API dumps, database exports, leak analysis. Fast, local, no accounts, no cloud. Your data is yours.
+      </p>
+    </div>
+
+    <!-- Bloque 3 — Tres cards de razones -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      
+      <!-- Card 1 -->
+      <div class="story-card opacity-0 translate-y-[30px] bg-surface-elevated border border-border rounded-lg p-5 hover:border-brand/40 transition-colors duration-200">
+        <div class="mb-4 text-brand">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+        </div>
+        <h3 class="text-text-primary font-semibold mb-2">Your data never leaves</h3>
+        <p class="text-text-secondary text-sm leading-relaxed">
+          No uploads. No accounts. No cloud sync. Everything runs locally on your machine.
+        </p>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="story-card opacity-0 translate-y-[30px] bg-surface-elevated border border-border rounded-lg p-5 hover:border-brand/40 transition-colors duration-200">
+        <div class="mb-4 text-brand">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
+        </div>
+        <h3 class="text-text-primary font-semibold mb-2">Built for real datasets</h3>
+        <p class="text-text-secondary text-sm leading-relaxed">
+          50k rows? Nested JSON? Mixed types? ExphoraDB handles it without breaking.
+        </p>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="story-card opacity-0 translate-y-[30px] bg-surface-elevated border border-border rounded-lg p-5 hover:border-brand/40 transition-colors duration-200">
+        <div class="mb-4 text-brand">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
+        </div>
+        <h3 class="text-text-primary font-semibold mb-2">Made by a developer, for developers</h3>
+        <p class="text-text-secondary text-sm leading-relaxed">
+          Not a business tool. Not a BI dashboard. Just a fast, honest data explorer.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<script>
+  import { animate, inView } from 'motion';
+
+  const container = document.querySelector('.story-container');
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (container) {
+    if (!prefersReducedMotion) {
+      inView(container, () => {
+        // Header
+        animate('.story-header', 
+          { opacity: [0, 1], y: [20, 0] }, 
+          { duration: 0.4, delay: 0, ease: 'easeOut' }
+        );
+        
+        // Paragraphs
+        const paragraphs = document.querySelectorAll('.story-p');
+        if (paragraphs.length) {
+          animate(Array.from(paragraphs), 
+            { opacity: [0, 1], y: [20, 0] }, 
+            { duration: 0.45, delay: 0.1, ease: 'easeOut' }
+          );
+        }
+
+        // Cards
+        const cards = document.querySelectorAll('.story-card');
+        if (cards.length) {
+          animate(Array.from(cards), 
+            { opacity: [0, 1], y: [30, 0] }, 
+            { duration: 0.5, delay: (index) => 0.15 + (index * 0.08), ease: 'easeOut' }
+          );
+        }
+      }, { margin: "-10% 0px", once: true });
+    } else {
+      // Remove inline initial states
+      const elements = container.querySelectorAll('.story-header, .story-p, .story-card');
+      elements.forEach(el => {
+        if (el instanceof HTMLElement) {
+          el.style.opacity = '1';
+          el.style.transform = 'none';
+        }
+      });
+    }
+  }
+</script>

@@ -1,0 +1,36 @@
+---
+// src/components/Screenshot.astro
+const { BASE_URL } = import.meta.env;
+---
+<section class="py-24 px-6 overflow-hidden">
+  <div class="max-w-5xl mx-auto text-center">
+    <h2 class="text-2xl font-bold text-text-primary mb-12">See it in action</h2>
+    
+    <div class="screenshot-container relative opacity-0 scale-[0.97] max-w-[900px] mx-auto">
+      <div class="absolute inset-0 bg-brand/15 blur-[60px] rounded-[12px] z-0"></div>
+      <img src={`${BASE_URL}/screenshot.png`} alt="ExphoraDB Interface" class="relative z-10 w-full rounded-[12px] border border-border-strong shadow-lg" />
+    </div>
+  </div>
+</section>
+
+<script>
+  import { animate, inView } from 'motion';
+
+  const container = document.querySelector('.screenshot-container');
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (container) {
+    if (!prefersReducedMotion) {
+      inView(container, () => {
+        animate(container, 
+          { opacity: [0, 1], scale: [0.97, 1] }, 
+          { duration: 0.6, ease: 'easeOut' }
+        );
+      }, { margin: "-20% 0px", once: true });
+    } else {
+      const el = container as HTMLElement;
+      el.style.opacity = '1';
+      el.style.transform = 'none';
+    }
+  }
+</script>
