@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { X, Save, MoreHorizontal, FileText } from "lucide-react";
+import { X, Save, MoreHorizontal, FileText, ChevronUp, ChevronDown, LayoutDashboard } from "lucide-react";
 import { useAppStore } from "../../store/appStore";
 import { useDataset } from "../../hooks/useDataset";
 import { toViewState } from "../../types";
@@ -192,6 +192,15 @@ export function TabBar() {
                             </div>
                         );
                     })()}
+                    
+                    <button
+                        onClick={() => updateTabUi(activeTabId, { showDashboard: !tabUiStateMap[activeTabId]?.showDashboard })}
+                        className={`p-1 px-2.5 ml-1 text-xs hover:text-zinc-200 bg-zinc-800/50 hover:bg-zinc-800 rounded-md border border-zinc-700/50 transition-colors flex items-center gap-1.5 ${tabUiStateMap[activeTabId]?.showDashboard ? "text-violet-300 border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20" : "text-zinc-400"}`}
+                    >
+                        <LayoutDashboard size={12} />
+                        Dashboard
+                        {tabUiStateMap[activeTabId]?.showDashboard ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
                     
                     <button
                         onClick={toggleNotesWindow}

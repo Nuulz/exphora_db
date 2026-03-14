@@ -4,6 +4,19 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct WidgetConfig {
+    pub id: String,
+    pub r#type: String, // frequency, bar, line
+    pub x_column: String,
+    pub y_column: Option<String>,
+    pub group_by_column: Option<String>,
+    pub title: Option<String>,
+    pub slot: u8,
+    pub options: Option<Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ViewState {
     pub dataset_path: String,
     pub filters: Value,
@@ -17,6 +30,8 @@ pub struct ViewState {
     pub frequency_chart_col: Option<String>,
     #[serde(default)]
     pub charts: Option<Value>,
+    #[serde(default)]
+    pub widgets: Vec<WidgetConfig>,
     #[serde(default)]
     pub notes: String,
 }
