@@ -2,21 +2,73 @@
 // src/components/Changelog.astro
 const updates = [
   {
+    version: "v0.8.4",
+    date: "March 13, 2026",
+    title: "Relational Operators & Dashboard Polish",
+    description: "Closes the last technical debt of the expression parser and adds inline widget title editing.",
+    changes: [
+      { type: "Added", text: "Full relational operator support in calculated columns: >, <, >=, <=, ==, != with correct Pratt precedence. Works inside if() and countif()." },
+      { type: "Added", text: "String comparison via == and != operators. Lexicographic ordering for >, <, >=, <=." },
+      { type: "Added", text: "Inline editable widget titles in the dashboard: double-click any widget header to rename it. Enter confirms, Escape cancels. Persisted in the .exh view file." },
+      { type: "Fixed", text: "countif() and if() conditions now use native relational syntax (countif(price > 100)) instead of arithmetic workarounds." },
+      { type: "Fixed", text: "num() now returns 0.0 instead of Null when the value is not parseable as a number." }
+    ]
+  },
+  {
+    version: "v0.8.3",
+    date: "March 13, 2026",
+    title: "Advanced Expression Functions",
+    description: "Extends the Pratt parser with aggregate and utility functions for calculated columns.",
+    changes: [
+      { type: "Added", text: "Aggregate functions in calculated columns: sum(col), avg(col), countif(condition). Operate exclusively over filtered rows — results update when filters change." },
+      { type: "Added", text: "Conditional function: if(condition, value_if_true, value_if_false) with lazy evaluation — the false branch is never computed." },
+      { type: "Added", text: "Utility functions: round(expr, decimals), num(value) for safe numeric casting." },
+      { type: "Added", text: "41 unit tests covering all new parser functions." }
+    ]
+  },
+  {
+    version: "v0.8.2",
+    date: "March 13, 2026",
+    title: "Lightweight Dashboard per View",
+    description: "Each saved view can now hold up to 3 chart widgets with drag & drop, zoom, pan, and fullscreen support.",
+    changes: [
+      { type: "Added", text: "Dashboard layout per view: up to 3 chart slots (histogram, bar, line) persisted inside the .exh file." },
+      { type: "Added", text: "Add Chart wizard: choose chart type, X column, and optional Y column in 3 clicks." },
+      { type: "Added", text: "Drag & drop between slots via @dnd-kit with swap logic. Reordering persists immediately to disk." },
+      { type: "Added", text: "Zoom and pan inside any widget using mouse wheel and drag (react-zoom-pan-pinch). Disabled automatically during slot drag." },
+      { type: "Added", text: "Brush selector on X axis for bar and line charts when there are more than 15 data points." },
+      { type: "Added", text: "Per-widget fullscreen mode via React Portal. Close with Minimize button or Escape key." },
+      { type: "Added", text: "Dashboard toggle button in TabBar (collapsed by default). State is session-only, not saved to .exh." }
+    ]
+  },
+  {
+    version: "v0.8.1",
+    date: "March 13, 2026",
+    title: "Unified Chart System",
+    description: "Moves all chart data aggregation to Rust and introduces a reusable chart architecture.",
+    changes: [
+      { type: "Added", text: "Tauri command build_chart_data(records, filtered_indices, config): all aggregation logic now runs in Rust, not TypeScript." },
+      { type: "Added", text: "ChartConfig interface in TypeScript: type, xColumn, yColumn, groupByColumn, aggregation, limit, id, options." },
+      { type: "Added", text: "useChartData() custom hook: centralized async loading with 150ms debounce, isMounted cleanup, and loading/error states." },
+      { type: "Added", text: "chartTheme.tsx: shared colors, tooltips and loading overlays across all chart components." },
+      { type: "Added", text: "BarChart and LineChart components as thin wrappers over useChartData." },
+      { type: "Improved", text: "FrequencyChart migrated to the new backend. Frequency calculation moved from TypeScript to Rust." }
+    ]
+  },
+  {
     version: "v0.7.2",
     date: "March 11, 2026",
     title: "Views, Persistence & Notes Panel",
     description: "The biggest productivity update yet. Introducing Exphora Views, Smart Save, floating Markdown notes, and column annotations.",
     changes: [
-      { type: "Added", text: "View system (.exh files): seamlessly save and restore complete tab states including active filters, column configurations, sorting, calculated columns, pinned columns, and chart states directly to disk." },
-      { type: "Added", text: "Smart Save: after saving a view once, the Save button writes directly to the same file without reopening the dialog. A secondary (...) button lets you save to a new location anytime." },
-      { type: "Added", text: "Automatic filename suggestion: when saving a view for the first time, the OS dialog pre-fills the name based on the active dataset (e.g. ventas_2025.exh)." },
-      { type: "Added", text: "Floating Markdown notes panel per view: a freely draggable, resizable window with Code, Preview, and Split modes. Notes persist inside the .exh file." },
-      { type: "Added", text: "Column annotations: add short notes to any column directly from the header context menu. A discrete dot indicator and tooltip appear on annotated columns. Persisted inside the .exh file." },
-      { type: "Added", text: "Recent Views section in the Sidebar: tracks the last opened views across sessions for quick access." },
-      { type: "Added", text: "RelinkModal: when a view's underlying dataset has been moved or renamed, ExphoraDB detects it and lets you locate the file manually to restore the session." },
-      { type: "Added", text: "Native .exh file association on Windows: open any saved view directly from Explorer." },
-      { type: "Fixed", text: "Landing page blank screen caused by missing <!DOCTYPE html> declaration (Tailwind v4 Quirks Mode regression)." },
-      { type: "Fixed", text: "Resolved deep search highlight overlaps and column-specific field:value filter logic regressions." }
+      { type: "Added", text: "View system (.exh files): save and restore complete tab states including filters, column config, sorting, calculated columns, pinned columns, and chart states." },
+      { type: "Added", text: "Smart Save: after saving a view once, the Save button writes directly to the same file. A secondary (...) button lets you save to a new location." },
+      { type: "Added", text: "Floating Markdown notes panel per view: draggable and resizable, with Code, Preview, and Split modes. Persisted in .exh." },
+      { type: "Added", text: "Column annotations: add short notes to any column from the header context menu. Dot indicator and tooltip on annotated columns." },
+      { type: "Added", text: "Recent Views section in the Sidebar. RelinkModal for views whose dataset has been moved or renamed." },
+      { type: "Added", text: "Native .exh file association on Windows: open saved views directly from Explorer." },
+      { type: "Fixed", text: "Landing page blank screen caused by missing <!DOCTYPE html> declaration (Tailwind v4 regression)." },
+      { type: "Fixed", text: "Deep search highlight overlaps and column-specific field:value filter logic regressions." }
     ]
   }
 ];

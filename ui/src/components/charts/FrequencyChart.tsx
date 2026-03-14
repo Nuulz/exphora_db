@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from "react";
+import React, { useRef, useMemo, useCallback } from "react";
 import {
     BarChart,
     Bar,
@@ -11,32 +11,47 @@ import {
 import { X, Download } from "lucide-react";
 import { useAppStore } from "../../store/appStore";
 import { useFocusTrap } from "../../hooks/useFocusTrap";
+import { ChartConfig } from "../../types";
+import { useChartData } from "../../hooks/useChartData";
+import { CHART_THEME, ChartTooltip, ChartLoadingOverlay, ChartErrorOverlay } from "./chartTheme";
 
 interface FrequencyChartProps {
     tabId: string;
     col: string;
-    onClose: () => void;
+    onClose?: () => void;
+    isWidget?: boolean;
 }
 
-export function FrequencyChart({ tabId, col, onClose }: FrequencyChartProps) {
+export function FrequencyChart({ tabId, col, onClose, isWidget }: FrequencyChartProps) {
     const ui = useAppStore((s) => s.tabUi[tabId])!;
     const tab = useAppStore((s) => s.tabs.find((t) => t.id === tabId))!;
     const chartRef = useRef<HTMLDivElement>(null);
 
-    useFocusTrap(chartRef, true, true, true);
+    useFocusTrap(chartRef, !isWidget, !isWidget, !isWidget);
 
-    // Build frequency data from filtered records (top 20)
-    const freq: Record<string, number> = {};
-    for (const idx of ui.filteredIndices) {
-        const rec = tab.records[idx] as Record<string, unknown>;
-        const val = String(rec[col] ?? "null") || "null";
-        freq[val] = (freq[val] ?? 0) + 1;
-    }
+    // Standardize config 
+    const config = useMemo<ChartConfig>(() => ({
+        type: "histogram",
+        xColumn: col,
+        limit: 20,
+        sort: "desc"
+    }), [col]);
+
+    const { data: result, loading, error } = useChartData(config, tab.records as Record<string, unknown>[], ui.filteredIndices);
     const total = ui.filteredIndices.length;
-    const data = Object.entries(freq)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 20)
-        .map(([name, count]) => ({ name, count, pct: total > 0 ? ((count / total) * 100).toFixed(1) : "0" }));
+
+    // Transform ChartDataResult to Recharts expected format
+    const chartData = useMemo(() => {
+        if (!result) return [];
+        return result.categories.map((cat: { name: string }, idx: number) => {
+            const count = result.series[0]?.data[idx] ?? 0;
+            return {
+                name: cat.name,
+                count,
+                pct: total > 0 ? ((count / total) * 100).toFixed(1) : "0",
+            };
+        });
+    }, [result, total]);
 
     const exportPng = useCallback(() => {
         const svgEl = chartRef.current?.querySelector("svg");
@@ -59,57 +74,52 @@ export function FrequencyChart({ tabId, col, onClose }: FrequencyChartProps) {
         img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
     }, [col]);
 
-    const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: { payload: { name: string; count: number; pct: string } }[] }) => {
-        if (!active || !payload?.length) return null;
-        const d = payload[0].payload;
-        return (
-            <div className="panel px-3 py-2 text-xs">
-                <div className="text-zinc-300 font-mono mb-1">{d.name}</div>
-                <div className="text-zinc-400">{d.count.toLocaleString()} registros</div>
-                <div className="text-violet-400">{d.pct}% del total</div>
-            </div>
-        );
-    };
-
     return (
         <div
-            className="freq-chart-panel panel animate-fade-in flex flex-col"
-            style={{ left: "calc(50vw - 240px)", top: "calc(50vh - 210px)" }}
-            onClick={(e) => e.stopPropagation()}
+            className={isWidget ? "w-full h-full relative flex flex-col" : "w-full h-full flex flex-col"}
+            style={isWidget ? { minHeight: "300px" } : {}}
+            onClick={isWidget ? undefined : (e) => e.stopPropagation()}
         >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
-                <div>
-                    <div className="text-zinc-100 font-semibold text-sm">{col}</div>
-                    <div className="text-zinc-500 text-xs">Top {data.length} valores por frecuencia</div>
+            {!isWidget && (
+                <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0 bg-zinc-900/50">
+                    <div>
+                        <div className="text-zinc-100 font-semibold text-sm">{col}</div>
+                        <div className="text-zinc-500 text-xs">Top {chartData.length} valores por frecuencia</div>
+                    </div>
+                    <div className="flex gap-1">
+                        <button className="btn ghost h-7 px-2 text-xs" onClick={exportPng}>
+                            <Download size={12} /> PNG
+                        </button>
+                        {onClose && (
+                            <button className="btn ghost h-7 w-7 p-0" onClick={onClose}>
+                                <X size={13} />
+                            </button>
+                        )}
+                    </div>
                 </div>
-                <div className="flex gap-1">
-                    <button className="btn ghost h-7 px-2 text-xs" onClick={exportPng}>
-                        <Download size={12} /> PNG
-                    </button>
-                    <button className="btn ghost h-7 w-7 p-0" onClick={onClose}>
-                        <X size={13} />
-                    </button>
-                </div>
-            </div>
+            )}
 
             {/* Chart */}
-            <div ref={chartRef} className="flex-1 p-3">
+            <div ref={chartRef} className="flex-1 p-3 relative">
+                {loading && <ChartLoadingOverlay />}
+                {error && <ChartErrorOverlay error={error} />}
+
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data} layout="vertical" margin={{ left: 0, right: 16, top: 4, bottom: 4 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
-                        <XAxis type="number" tick={{ fill: "#71717a", fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <BarChart data={chartData} layout="vertical" margin={CHART_THEME.margins}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.colors.grid} horizontal={false} />
+                        <XAxis type="number" tick={{ fill: CHART_THEME.colors.text.axis, fontSize: CHART_THEME.font.size }} axisLine={false} tickLine={false} />
                         <YAxis
                             type="category"
                             dataKey="name"
                             width={110}
-                            tick={{ fill: "#a1a1aa", fontSize: 11, fontFamily: "monospace" }}
+                            tick={{ fill: CHART_THEME.colors.text.label, fontSize: CHART_THEME.font.size, fontFamily: CHART_THEME.font.family }}
                             axisLine={false}
                             tickLine={false}
                             tickFormatter={(v) => (String(v).length > 14 ? String(v).slice(0, 13) + "…" : v)}
                         />
-                        <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(139,92,246,0.1)" }} />
-                        <Bar dataKey="count" fill="#8b5cf6" radius={[0, 3, 3, 0]} />
+                        <Tooltip content={<ChartTooltip />} cursor={{ fill: CHART_THEME.colors.tooltip.bg }} />
+                        <Bar dataKey="count" fill={CHART_THEME.colors.primary} radius={[0, 3, 3, 0]} />
                     </BarChart>
                 </ResponsiveContainer>
             </div>

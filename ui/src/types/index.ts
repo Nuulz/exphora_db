@@ -64,6 +64,19 @@ export interface ColumnStats {
     is_numeric: boolean;
 }
 
+// ── Dashboard Widgets (v0.8.2) ────────────────────────────────────────────────
+
+export interface WidgetConfig {
+    id: string;
+    type: "frequency" | "bar" | "line";
+    xColumn: string;
+    yColumn?: string;
+    groupByColumn?: string;
+    title?: string;
+    slot: number;
+    options?: Record<string, unknown>;
+}
+
 // ── Command results ───────────────────────────────────────────────────────────
 
 export interface FilterResult {
@@ -91,6 +104,7 @@ export interface ViewState {
     showFrequencyChart: boolean;
     frequencyChartCol: string | null;
     charts: any | null;
+    widgets?: WidgetConfig[];
 }
 
 export interface TabUiState {
@@ -107,6 +121,8 @@ export interface TabUiState {
     activeStats: ColumnStats | null;
     showFrequencyChart: boolean;
     frequencyChartCol: string | null;
+    showDashboard: boolean;
+    widgets: WidgetConfig[];
 
     // Feature: Inline Editing
     editingCell: { rowIndex: number; colName: string } | null;
@@ -143,6 +159,8 @@ export function defaultTabUiState(tab: LoadedTab): TabUiState {
         activeStats: null,
         showFrequencyChart: false,
         frequencyChartCol: null,
+        showDashboard: false,
+        widgets: [],
         editingCell: null,
         editHistory: { past: [], future: [] },
         saveStatus: 'idle',
@@ -167,7 +185,8 @@ export function toViewState(tab: LoadedTab, ui: TabUiState): ViewState {
         sortAsc: ui.sortAsc,
         showFrequencyChart: ui.showFrequencyChart,
         frequencyChartCol: ui.frequencyChartCol,
-        charts: null
+        charts: null,
+        widgets: [...ui.widgets]
     };
 }
 
@@ -181,7 +200,8 @@ export function fromViewState(view: ViewState): Partial<TabUiState> {
         sortCol: view.sortCol,
         sortAsc: view.sortAsc,
         showFrequencyChart: view.showFrequencyChart,
-        frequencyChartCol: view.frequencyChartCol
+        frequencyChartCol: view.frequencyChartCol,
+        widgets: view.widgets ? [...view.widgets] : []
     };
 }
 
@@ -190,4 +210,37 @@ export interface RecentViewEntry {
     path: string;        // ruta absoluta del archivo .exh
     datasetPath: string; // ruta del dataset asociado
     openedAt: string;    // ISO 8601 timestamp
+}
+
+// ── Chart Types (v0.8.1) ──────────────────────────────────────────────────────
+
+export interface ChartConfig {
+    id?: string;
+    type: "histogram" | "bar" | "line";
+    title?: string;
+    xColumn?: string;
+    yColumn?: string;
+    groupByColumn?: string;
+    aggregation?: "count" | "sum" | "avg" | "min" | "max";
+    sort?: "none" | "asc" | "desc";
+    limit?: number;
+    options?: Record<string, unknown>;
+}
+
+export interface ChartCategory {
+    name: string;
+}
+
+export interface ChartSeries {
+    name: string;
+    data: number[];
+}
+
+export interface ChartDataResult {
+    chartType: string;
+    xLabel: string;
+    yLabel: string;
+    categories: ChartCategory[];
+    series: ChartSeries[];
+    meta: Record<string, string>;
 }

@@ -10,6 +10,7 @@ import { SettingsWindow } from "./components/settings/SettingsWindow";
 import { ColumnPickerModal } from "./components/modals/ColumnPickerModal";
 import { ExportPickerModal } from "./components/modals/ExportPickerModal";
 import { NoteFloatingWindow } from "./components/notes/NoteFloatingWindow";
+import { DashboardLayout } from "./components/dashboard/DashboardLayout";
 import { useAppStore } from "./store/appStore";
 import { useDataset } from "./hooks/useDataset";
 
@@ -188,6 +189,9 @@ export default function App() {
                     ) : activeTabId ? (
                         <div className="flex-1 flex flex-col overflow-hidden relative">
                             <DataTable key={activeTabId} tabId={activeTabId} />
+                            <div style={{ display: ui?.showDashboard ? "block" : "none" }}>
+                                <DashboardLayout tabId={activeTabId} />
+                            </div>
                         </div>
                     ) : null}
                 </div>
@@ -198,11 +202,16 @@ export default function App() {
                 <>
                     {ui.activeStats && <StatsPanel tabId={activeTabId} />}
                     {ui.showFrequencyChart && ui.frequencyChartCol && (
-                        <FrequencyChart
-                            tabId={activeTabId}
-                            col={ui.frequencyChartCol}
-                            onClose={() => updateTabUi(activeTabId, { showFrequencyChart: false })}
-                        />
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 translate-z-0" onClick={() => updateTabUi(activeTabId, { showFrequencyChart: false })}>
+                            <div className="w-[480px] h-[400px] animate-fade-in flex flex-col overflow-hidden bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl" onClick={e => e.stopPropagation()}>
+                                <FrequencyChart
+                                    tabId={activeTabId}
+                                    col={ui.frequencyChartCol}
+                                    onClose={() => updateTabUi(activeTabId, { showFrequencyChart: false })}
+                                    isWidget={false}
+                                />
+                            </div>
+                        </div>
                     )}
                 </>
             )}

@@ -4,8 +4,11 @@
 ///   Arithmetic:  +  -  *  /   (correct precedence)
 ///   String:      "str" + field  (concatenation when either side is a string)
 ///   Functions:   upper, lower, len, trim, str, num, round(x, N)
-///   Column refs: bare identifier matching a key in the record map
+///   Row Funcs:   if(cond, true_val, false_val) - lazy evaluated based on `cond`
+///   Aggregates:  sum(col), avg(col), countif(cond)
 ///
+/// Row functions (if, round, num) evaluate per-row dynamically.
+/// Aggregate functions evaluate across the entire subset of `filtered_indices` and return a uniform, global value mapped across each row calculation.
 /// Any evaluation error ⟹ ExprValue::Null (no panic).
 use std::collections::HashMap;
 
@@ -36,14 +39,19 @@ impl ExprValue {
 }
 
 /// Evaluate `expr` substituting column references from `record`.
+/// When evaluating aggregate functions (sum/avg), `all_records` provides the subset context.
 /// Returns `ExprValue::Null` on any error.
-pub fn eval_expr(expr: &str, record: &HashMap<String, String>) -> ExprValue {
+pub fn eval_expr(
+    expr: &str, 
+    record: &HashMap<String, String>,
+    all_records: Option<&[HashMap<String, String>]>,
+) -> ExprValue {
     let tokens = tokenize(expr);
     if tokens.is_empty() {
         return ExprValue::Null;
     }
     let mut pos = 0usize;
-    match parse_expr(&tokens, &mut pos, 0, record) {
+    match parse_expr(&tokens, &mut pos, 0, record, all_records) {
         Some(v) => v,
         None => ExprValue::Null,
     }
@@ -63,6 +71,12 @@ enum Token {
     Comma,
     LParen,
     RParen,
+    Gt,
+    Lt,
+    GtEq,
+    LtEq,
+    EqEq,
+    NotEq,
 }
 
 fn tokenize(input: &str) -> Vec<Token> {
@@ -126,6 +140,42 @@ fn tokenize(input: &str) -> Vec<Token> {
                 tokens.push(Token::RParen);
                 i += 1;
             }
+            '>' => {
+                if i + 1 < chars.len() && chars[i + 1] == '=' {
+                    tokens.push(Token::GtEq);
+                    i += 2;
+                } else {
+                    tokens.push(Token::Gt);
+                    i += 1;
+                }
+            }
+            '<' => {
+                if i + 1 < chars.len() && chars[i + 1] == '=' {
+                    tokens.push(Token::LtEq);
+                    i += 2;
+                } else {
+                    tokens.push(Token::Lt);
+                    i += 1;
+                }
+            }
+            '=' => {
+                if i + 1 < chars.len() && chars[i + 1] == '=' {
+                    tokens.push(Token::EqEq);
+                    i += 2;
+                } else {
+                    // Not supporting single `=` as assignment, so just skip or ignore
+                    i += 1;
+                }
+            }
+            '!' => {
+                if i + 1 < chars.len() && chars[i + 1] == '=' {
+                    tokens.push(Token::NotEq);
+                    i += 2;
+                } else {
+                    // Not supporting unary `!` for now
+                    i += 1;
+                }
+            }
             c if c.is_ascii_digit() || c == '.' => {
                 let start = i;
                 while i < chars.len() && (chars[i].is_ascii_digit() || chars[i] == '.') {
@@ -156,9 +206,30 @@ fn tokenize(input: &str) -> Vec<Token> {
 
 fn precedence(tok: &Token) -> u8 {
     match tok {
-        Token::Plus | Token::Minus => 1,
-        Token::Star | Token::Slash => 2,
+        Token::EqEq | Token::NotEq => 1,
+        Token::Gt | Token::Lt | Token::GtEq | Token::LtEq => 2,
+        Token::Plus | Token::Minus => 3,
+        Token::Star | Token::Slash => 4,
         _ => 0,
+    }
+}
+
+/// Skips tokens marking nested scope brackets until a comma or final matching parenthesis
+fn skip_argument(tokens: &[Token], pos: &mut usize) {
+    let mut depth = 0;
+    while *pos < tokens.len() {
+        match tokens[*pos] {
+            Token::LParen => depth += 1,
+            Token::RParen => {
+                if depth == 0 { break; }
+                depth -= 1;
+            }
+            Token::Comma => {
+                if depth == 0 { break; }
+            }
+            _ => {}
+        }
+        *pos += 1;
     }
 }
 
@@ -169,8 +240,9 @@ fn parse_expr(
     pos: &mut usize,
     min_prec: u8,
     record: &HashMap<String, String>,
+    all_records: Option<&[HashMap<String, String>]>,
 ) -> Option<ExprValue> {
-    let mut lhs = parse_primary(tokens, pos, record)?;
+    let mut lhs = parse_primary(tokens, pos, record, all_records)?;
 
     loop {
         let op = match tokens.get(*pos) {
@@ -179,7 +251,7 @@ fn parse_expr(
         };
         let prec = precedence(&op);
         *pos += 1;
-        let rhs = parse_expr(tokens, pos, prec, record)?;
+        let rhs = parse_expr(tokens, pos, prec, record, all_records)?;
         lhs = apply_binop(&op, lhs, rhs)?;
     }
 
@@ -190,6 +262,7 @@ fn parse_primary(
     tokens: &[Token],
     pos: &mut usize,
     record: &HashMap<String, String>,
+    all_records: Option<&[HashMap<String, String>]>,
 ) -> Option<ExprValue> {
     match tokens.get(*pos)?.clone() {
         Token::Num(n) => {
@@ -202,7 +275,7 @@ fn parse_primary(
         }
         Token::LParen => {
             *pos += 1;
-            let val = parse_expr(tokens, pos, 0, record)?;
+            let val = parse_expr(tokens, pos, 0, record, all_records)?;
             if tokens.get(*pos) == Some(&Token::RParen) {
                 *pos += 1;
             }
@@ -211,7 +284,7 @@ fn parse_primary(
         Token::Minus => {
             // Unary minus
             *pos += 1;
-            let val = parse_primary(tokens, pos, record)?;
+            let val = parse_primary(tokens, pos, record, all_records)?;
             match val {
                 ExprValue::Num(n) => Some(ExprValue::Num(-n)),
                 _ => None,
@@ -222,7 +295,89 @@ fn parse_primary(
             // Function call?
             if tokens.get(*pos) == Some(&Token::LParen) {
                 *pos += 1; // consume '('
-                let args = parse_args(tokens, pos, record)?;
+                
+                let lower = name.to_lowercase();
+                
+                if lower == "if" {
+                    let cond = parse_expr(tokens, pos, 0, record, all_records)?;
+                    if tokens.get(*pos) != Some(&Token::Comma) { return None; }
+                    *pos += 1;
+                    
+                    let is_true = match cond {
+                        ExprValue::Num(n) => n != 0.0,
+                        ExprValue::Str(_) => true,
+                        ExprValue::Null => false,
+                    };
+                    
+                    if is_true {
+                        let true_val = parse_expr(tokens, pos, 0, record, all_records)?;
+                        if tokens.get(*pos) != Some(&Token::Comma) { return None; }
+                        *pos += 1;
+                        skip_argument(tokens, pos);
+                        if tokens.get(*pos) == Some(&Token::RParen) { *pos += 1; }
+                        return Some(true_val);
+                    } else {
+                        skip_argument(tokens, pos);
+                        if tokens.get(*pos) != Some(&Token::Comma) { return None; }
+                        *pos += 1;
+                        let false_val = parse_expr(tokens, pos, 0, record, all_records)?;
+                        if tokens.get(*pos) == Some(&Token::RParen) { *pos += 1; }
+                        return Some(false_val);
+                    }
+                }
+                
+                if matches!(lower.as_str(), "sum" | "avg" | "countif") {
+                    let arg_start = *pos;
+                    skip_argument(tokens, pos);
+                    if tokens.get(*pos) == Some(&Token::RParen) { *pos += 1; } else { return None; }
+                    
+                    if let Some(records_slice) = all_records {
+                        let mut sum_val = 0.0;
+                        let mut count = 0;
+                        for r in records_slice {
+                            let mut local_pos = arg_start;
+                            // Evaluate sequentially simulating local row access mapping subset globally
+                            let val = parse_expr(tokens, &mut local_pos, 0, r, all_records)?;
+                            if lower == "countif" {
+                                let is_true = match val {
+                                    ExprValue::Num(n) => n != 0.0,
+                                    ExprValue::Str(_) => true,
+                                    ExprValue::Null => false,
+                                };
+                                if is_true {
+                                    count += 1;
+                                }
+                            } else {
+                                if let ExprValue::Num(n) = val {
+                                    sum_val += n;
+                                    count += 1;
+                                } else if let ExprValue::Str(s) = val {
+                                    if let Ok(n) = s.parse::<f64>() {
+                                        sum_val += n;
+                                        count += 1;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        match lower.as_str() {
+                            "sum" => return Some(ExprValue::Num(sum_val)),
+                            "avg" => {
+                                if count > 0 { 
+                                    return Some(ExprValue::Num(sum_val / count as f64));
+                                } else { 
+                                    return Some(ExprValue::Num(0.0));
+                                }
+                            }
+                            "countif" => return Some(ExprValue::Num(count as f64)),
+                            _ => unreachable!(),
+                        }
+                    } else {
+                        return Some(ExprValue::Null); // Undefined bounds mapping context empty
+                    }
+                }
+
+                let args = parse_args(tokens, pos, record, all_records)?;
                 Some(call_function(&name, args))
             } else {
                 // Column reference
@@ -247,6 +402,7 @@ fn parse_args(
     tokens: &[Token],
     pos: &mut usize,
     record: &HashMap<String, String>,
+    all_records: Option<&[HashMap<String, String>]>,
 ) -> Option<Vec<ExprValue>> {
     let mut args = Vec::new();
     // Empty arg list
@@ -255,7 +411,7 @@ fn parse_args(
         return Some(args);
     }
     loop {
-        let val = parse_expr(tokens, pos, 0, record)?;
+        let val = parse_expr(tokens, pos, 0, record, all_records)?;
         args.push(val);
         match tokens.get(*pos) {
             Some(Token::Comma) => {
@@ -304,6 +460,36 @@ fn apply_binop(op: &Token, lhs: ExprValue, rhs: ExprValue) -> Option<ExprValue> 
                     Some(ExprValue::Num(a / b))
                 }
             }
+            _ => None,
+        },
+        Token::Gt => match (&lhs, &rhs) {
+            (ExprValue::Num(a), ExprValue::Num(b)) => Some(ExprValue::Num(if a > b { 1.0 } else { 0.0 })),
+            (ExprValue::Str(a), ExprValue::Str(b)) => Some(ExprValue::Num(if a > b { 1.0 } else { 0.0 })),
+            _ => None,
+        },
+        Token::Lt => match (&lhs, &rhs) {
+            (ExprValue::Num(a), ExprValue::Num(b)) => Some(ExprValue::Num(if a < b { 1.0 } else { 0.0 })),
+            (ExprValue::Str(a), ExprValue::Str(b)) => Some(ExprValue::Num(if a < b { 1.0 } else { 0.0 })),
+            _ => None,
+        },
+        Token::GtEq => match (&lhs, &rhs) {
+            (ExprValue::Num(a), ExprValue::Num(b)) => Some(ExprValue::Num(if a >= b { 1.0 } else { 0.0 })),
+            (ExprValue::Str(a), ExprValue::Str(b)) => Some(ExprValue::Num(if a >= b { 1.0 } else { 0.0 })),
+            _ => None,
+        },
+        Token::LtEq => match (&lhs, &rhs) {
+            (ExprValue::Num(a), ExprValue::Num(b)) => Some(ExprValue::Num(if a <= b { 1.0 } else { 0.0 })),
+            (ExprValue::Str(a), ExprValue::Str(b)) => Some(ExprValue::Num(if a <= b { 1.0 } else { 0.0 })),
+            _ => None,
+        },
+        Token::EqEq => match (&lhs, &rhs) {
+            (ExprValue::Num(a), ExprValue::Num(b)) => Some(ExprValue::Num(if a == b { 1.0 } else { 0.0 })),
+            (ExprValue::Str(a), ExprValue::Str(b)) => Some(ExprValue::Num(if a == b { 1.0 } else { 0.0 })),
+            _ => None,
+        },
+        Token::NotEq => match (&lhs, &rhs) {
+            (ExprValue::Num(a), ExprValue::Num(b)) => Some(ExprValue::Num(if a != b { 1.0 } else { 0.0 })),
+            (ExprValue::Str(a), ExprValue::Str(b)) => Some(ExprValue::Num(if a != b { 1.0 } else { 0.0 })),
             _ => None,
         },
         _ => None,
@@ -356,10 +542,10 @@ fn call_function(name: &str, args: Vec<ExprValue>) -> ExprValue {
                     if let Ok(n) = s.trim().parse::<f64>() {
                         ExprValue::Num(n)
                     } else {
-                        ExprValue::Null
+                        ExprValue::Num(0.0) // Return 0.0 effectively bounding unparsed mappings
                     }
                 }
-                ExprValue::Null => ExprValue::Null,
+                ExprValue::Null => ExprValue::Num(0.0), // Yields default non-breaking fallback numeric format
             }
         }
         "round" => {
@@ -368,6 +554,7 @@ fn call_function(name: &str, args: Vec<ExprValue>) -> ExprValue {
             let decimals = it.next().unwrap_or(ExprValue::Num(0.0));
             match (val, decimals) {
                 (ExprValue::Num(n), ExprValue::Num(d)) => {
+                    let d = d.max(0.0); // Bounded strictly ensuring positive formatting
                     let factor = 10f64.powi(d as i32);
                     Some(ExprValue::Num((n * factor).round() / factor)).unwrap_or(ExprValue::Null)
                 }
@@ -412,39 +599,130 @@ mod tests {
     #[test]
     fn expr_arithmetic() {
         // 2 + 3 * 4 = 14  (correct precedence: * before +)
-        let v = eval_expr("2 + 3 * 4", &empty_rec());
+        let v = eval_expr("2 + 3 * 4", &empty_rec(), None);
         assert_eq!(v, ExprValue::Num(14.0));
     }
 
     #[test]
     fn expr_string_concat() {
-        let v = eval_expr("\"hola\" + \" \" + \"mundo\"", &empty_rec());
+        let v = eval_expr("\"hola\" + \" \" + \"mundo\"", &empty_rec(), None);
         assert_eq!(v, ExprValue::Str("hola mundo".into()));
     }
 
     #[test]
     fn expr_function_upper() {
-        let v = eval_expr("upper(\"texto\")", &empty_rec());
+        let v = eval_expr("upper(\"texto\")", &empty_rec(), None);
         assert_eq!(v, ExprValue::Str("TEXTO".into()));
     }
 
     #[test]
     fn expr_function_len() {
-        let v = eval_expr("len(\"abc\")", &empty_rec());
+        let v = eval_expr("len(\"abc\")", &empty_rec(), None);
         assert_eq!(v, ExprValue::Num(3.0));
     }
 
     #[test]
     fn expr_null_on_error() {
         // Division by zero must return Null, not panic
-        let v = eval_expr("10 / 0", &empty_rec());
+        let v = eval_expr("10 / 0", &empty_rec(), None);
         assert_eq!(v, ExprValue::Null);
     }
 
     #[test]
     fn expr_column_ref() {
         let r = rec(&[("precio", "10.0")]);
-        let v = eval_expr("precio", &r);
+        let v = eval_expr("precio", &r, None);
         assert_eq!(v, ExprValue::Num(10.0));
+    }
+
+    #[test]
+    fn expr_if_true_false() {
+        let v1 = eval_expr("if(1, \"high\", \"normal\")", &empty_rec(), None);
+        assert_eq!(v1, ExprValue::Str("high".into()));
+
+        let v2 = eval_expr("if(0, \"high\", \"normal\")", &empty_rec(), None);
+        assert_eq!(v2, ExprValue::Str("normal".into()));
+    }
+
+    #[test]
+    fn expr_if_nested() {
+        let r = rec(&[("val", "5")]);
+        // Nested logic: 5 > 10 is false. 5 > 2 is true -> "mid"
+        let exp = "if(val > 10, \"max\", if(val > 2, \"mid\", \"min\"))";
+        let v = eval_expr(exp, &r, None);
+        assert_eq!(v, ExprValue::Str("mid".into()));
+    }
+
+    #[test]
+    fn expr_round_and_num() {
+        let r = rec(&[("p", "10.556")]);
+        let vr = eval_expr("round(num(p), 1)", &r, None);
+        assert_eq!(vr, ExprValue::Num(10.6));
+
+        // Unparseable implicitly coerces down to safe 0.0 yielding stability
+        let v_nan = eval_expr("num(\"invalido\")", &empty_rec(), None);
+        assert_eq!(v_nan, ExprValue::Num(0.0));
+    }
+
+    #[test]
+    fn expr_aggregates() {
+        let row1 = rec(&[("cat", "A"), ("val", "10")]);
+        let row2 = rec(&[("cat", "B"), ("val", "20")]);
+        let row3 = rec(&[("cat", "A"), ("val", "30")]);
+        
+        let all = vec![row1.clone(), row2, row3];
+        let context = Some(all.as_slice());
+
+        let v_sum = eval_expr("sum(val)", &row1, context);
+        assert_eq!(v_sum, ExprValue::Num(60.0));
+
+        let v_avg = eval_expr("avg(val)", &row1, context);
+        assert_eq!(v_avg, ExprValue::Num(20.0));
+
+        // countif(val > 15): row2(20>15), row3(30>15) -> 2.0
+        let v_count_num = eval_expr("countif(val > 15)", &row1, context);
+        assert_eq!(v_count_num, ExprValue::Num(2.0));
+
+        // countif(cat == "A"): row1, row3 -> 2.0
+        let v_count_cat = eval_expr("countif(cat == \"A\")", &row1, context);
+        assert_eq!(v_count_cat, ExprValue::Num(2.0));
+    }
+
+    #[test]
+    fn expr_relational() {
+        let r = rec(&[("a", "10"), ("b", "20"), ("c", "10")]);
+        
+        // >
+        assert_eq!(eval_expr("b > a", &r, None), ExprValue::Num(1.0));
+        assert_eq!(eval_expr("a > b", &r, None), ExprValue::Num(0.0));
+
+        // <
+        assert_eq!(eval_expr("a < b", &r, None), ExprValue::Num(1.0));
+        assert_eq!(eval_expr("b < a", &r, None), ExprValue::Num(0.0));
+
+        // >=
+        assert_eq!(eval_expr("a >= c", &r, None), ExprValue::Num(1.0));
+        assert_eq!(eval_expr("b >= a", &r, None), ExprValue::Num(1.0));
+        assert_eq!(eval_expr("a >= b", &r, None), ExprValue::Num(0.0));
+
+        // <=
+        assert_eq!(eval_expr("a <= c", &r, None), ExprValue::Num(1.0));
+        assert_eq!(eval_expr("a <= b", &r, None), ExprValue::Num(1.0));
+        assert_eq!(eval_expr("b <= a", &r, None), ExprValue::Num(0.0));
+
+        // ==
+        assert_eq!(eval_expr("a == c", &r, None), ExprValue::Num(1.0));
+        assert_eq!(eval_expr("a == b", &r, None), ExprValue::Num(0.0));
+
+        // !=
+        assert_eq!(eval_expr("a != b", &r, None), ExprValue::Num(1.0));
+        assert_eq!(eval_expr("a != c", &r, None), ExprValue::Num(0.0));
+
+        // strings
+        let s = rec(&[("s1", "abc"), ("s2", "xyz"), ("s3", "abc")]);
+        assert_eq!(eval_expr("s1 == s3", &s, None), ExprValue::Num(1.0));
+        assert_eq!(eval_expr("s1 != s2", &s, None), ExprValue::Num(1.0));
+        assert_eq!(eval_expr("s2 > s1", &s, None), ExprValue::Num(1.0));
+        assert_eq!(eval_expr("s1 < s2", &s, None), ExprValue::Num(1.0));
     }
 }
