@@ -17,6 +17,10 @@ export function P2PPanel({ onClose }: P2PPanelProps) {
     const activeTabId = useAppStore((s) => s.activeTabId);
     const activeTab = tabs.find((t) => t.id === activeTabId);
     const addTabs = useAppStore((s) => s.addTabs);
+    const updateTabUi = useAppStore((s) => s.updateTabUi);
+
+    const [includeView, setIncludeView] = useState(false);
+    const [includeNotes, setIncludeNotes] = useState(false);
 
     const [port, setPort] = useState("9876");
     const [sharing, setSharing] = useState(false);
@@ -35,10 +39,41 @@ export function P2PPanel({ onClose }: P2PPanelProps) {
         setSharing(true);
         setShareLink("");
         try {
+            const activeUi = useAppStore.getState().tabUi[activeTab.id];
+            
+            let viewToShare = null;
+            let viewNotesToShare = null;
+            let columnNotesToShare = null;
+
+            if (includeView && activeUi) {
+                viewToShare = {
+                    datasetPath: activeTab.path || "",
+                    filters: JSON.parse(JSON.stringify(activeUi.filters)),
+                    textSearch: activeUi.textSearch,
+                    visibleColumns: { ...activeUi.visibleColumns },
+                    frozenCols: [...activeUi.frozenCols],
+                    calcCols: activeUi.calcCols.map((c: any) => ({ ...c })),
+                    sortCol: activeUi.sortCol,
+                    sortAsc: activeUi.sortAsc,
+                    showFrequencyChart: activeUi.showFrequencyChart,
+                    frequencyChartCol: activeUi.frequencyChartCol,
+                    charts: null,
+                    widgets: [...activeUi.widgets]
+                };
+            }
+
+            if (includeNotes && activeUi) {
+                viewNotesToShare = activeUi.viewNotes;
+                columnNotesToShare = activeUi.columnNotes;
+            }
+
             const link = await invoke<string>("p2p_share", {
                 name: activeTab.name,
                 records: activeTab.records,
                 port: parseInt(port, 10),
+                view: viewToShare,
+                viewNotes: viewNotesToShare,
+                columnNotes: columnNotesToShare,
             });
             setShareLink(link);
         } catch (err) {
@@ -52,8 +87,40 @@ export function P2PPanel({ onClose }: P2PPanelProps) {
         if (!fetchLink.trim()) return;
         setFetching(true);
         try {
-            const newTab = await invoke<LoadedTab>("p2p_fetch", { link: fetchLink.trim() });
-            addTabs([newTab]);
+            const result = await invoke<{
+                tab: LoadedTab;
+                view: any | null;
+                viewNotes: string | null;
+                columnNotes: Record<string, string> | null;
+            }>("p2p_fetch", { link: fetchLink.trim() });
+            
+            addTabs([result.tab]);
+            
+            if (result.view || result.viewNotes || result.columnNotes) {
+                if (window.confirm("Esta vista incluye un análisis o notas guardadas. ¿Aplicar vista recibida?")) {
+                    const uiPatch: any = {};
+                    if (result.view) {
+                        uiPatch.filters = result.view.filters;
+                        uiPatch.textSearch = result.view.textSearch;
+                        uiPatch.visibleColumns = result.view.visibleColumns;
+                        uiPatch.frozenCols = result.view.frozenCols;
+                        uiPatch.calcCols = result.view.calcCols;
+                        uiPatch.sortCol = result.view.sortCol;
+                        uiPatch.sortAsc = result.view.sortAsc;
+                        uiPatch.showFrequencyChart = result.view.showFrequencyChart;
+                        uiPatch.frequencyChartCol = result.view.frequencyChartCol;
+                        uiPatch.widgets = result.view.widgets || [];
+                    }
+                    if (result.viewNotes) {
+                        uiPatch.viewNotes = result.viewNotes;
+                    }
+                    if (result.columnNotes) {
+                        uiPatch.columnNotes = result.columnNotes;
+                    }
+                    updateTabUi(result.tab.id, uiPatch);
+                }
+            }
+
             onClose();
         } catch (err) {
             alert(`Error receiving dataset: ${err}`);
@@ -106,6 +173,28 @@ export function P2PPanel({ onClose }: P2PPanelProps) {
                                 <label className="text-xs text-zinc-400 block mb-1">Local port</label>
                                 <input type="number" className="w-full" value={port} onChange={(e) => setPort(e.target.value)} min={1024} max={65535} />
                             </div>
+                            
+                            <div className="space-y-2 mb-2 pt-2">
+                                <label className="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        className="form-checkbox bg-zinc-800 border-zinc-700 text-violet-500 rounded"
+                                        checked={includeView}
+                                        onChange={(e) => setIncludeView(e.target.checked)} 
+                                    />
+                                    Incluir vista actual
+                                </label>
+                                <label className="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        className="form-checkbox bg-zinc-800 border-zinc-700 text-violet-500 rounded"
+                                        checked={includeNotes}
+                                        onChange={(e) => setIncludeNotes(e.target.checked)} 
+                                    />
+                                    Incluir notas
+                                </label>
+                            </div>
+
                             <button
                                 className="btn primary w-full"
                                 disabled={!activeTab || sharing}

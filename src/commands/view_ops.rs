@@ -116,7 +116,9 @@ pub async fn load_view(file_path: String) -> Result<ViewFile, String> {
 
     validate_view_file(&view_file)?;
 
-    if !std::path::Path::new(&view_file.view.dataset_path).exists() {
+    let path_is_empty = view_file.view.dataset_path.is_empty()
+        || view_file.view.dataset_path.starts_with("p2p:");
+    if !path_is_empty && !std::path::Path::new(&view_file.view.dataset_path).exists() {
         let err_json = serde_json::json!({
             "code": "DATASET_NOT_FOUND",
             "dataset_path": view_file.view.dataset_path
