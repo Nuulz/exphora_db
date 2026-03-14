@@ -102,6 +102,7 @@ fn main() {
             commands::save_view,
             commands::load_view,
             commands::relink_view,
+            commands::build_chart_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

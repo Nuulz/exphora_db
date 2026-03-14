@@ -1,0 +1,209 @@
+warning: variable does not need to be mutable
+  --> src\commands\view_ops.rs:96:9
+   |
+96 |     let mut view_file = ViewFile {
+   |         ----^^^^^^^^^
+   |         |
+   |         help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `reset` is never used
+  --> src\filters.rs:20:12
+   |
+19 | impl DynamicFilters {
+   | ------------------- method in this implementation
+20 |     pub fn reset(&mut self) {
+   |            ^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `sort_indices` is never used
+   --> src\filters.rs:205:8
+    |
+205 | pub fn sort_indices(indices: &mut [usize], records: &[JsonRecord], column: &str, ascending: bool) {
+    |        ^^^^^^^^^^^^
+
+warning: field `distinct_count` is never read
+  --> src\models.rs:27:9
+   |
+22 | pub struct FieldMeta {
+   |            --------- field in this struct
+...
+27 |     pub distinct_count: usize,
+   |         ^^^^^^^^^^^^^^
+   |
+   = note: `FieldMeta` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: fields `filter_fields` and `bool_fields` are never read
+  --> src\models.rs:34:9
+   |
+31 | pub struct InferredSchema {
+   |            -------------- fields in this struct
+...
+34 |     pub filter_fields: Vec<String>,
+   |         ^^^^^^^^^^^^^
+35 |     pub bool_fields: Vec<String>,
+   |         ^^^^^^^^^^^
+   |
+   = note: `InferredSchema` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: struct `LoadedDataset` is never constructed
+   --> src\models.rs:133:12
+    |
+133 | pub struct LoadedDataset {
+    |            ^^^^^^^^^^^^^
+
+warning: associated function `all_checked` is never used
+   --> src\models.rs:171:12
+    |
+169 | impl EasyFilter {
+    | --------------- associated function in this implementation
+170 |     /// Build from a complete list of unique values (all checked by default).
+171 |     pub fn all_checked(values: impl IntoIterator<Item = String>) -> Self {
+    |            ^^^^^^^^^^^
+
+warning: methods `label` and `toggle` are never used
+   --> src\models.rs:199:12
+    |
+198 | impl Connector {
+    | -------------- methods in this implementation
+199 |     pub fn label(&self) -> &'static str {
+    |            ^^^^^
+...
+205 |     pub fn toggle(&mut self) {
+    |            ^^^^^^
+
+warning: associated items `label`, `all_text`, and `needs_value` are never used
+   --> src\models.rs:229:12
+    |
+228 | impl FilterOp {
+    | ------------- associated items in this implementation
+229 |     pub fn label(&self) -> &'static str {
+    |            ^^^^^
+...
+243 |     pub fn all_text() -> &'static [FilterOp] {
+    |            ^^^^^^^^
+...
+257 |     pub fn needs_value(&self) -> bool {
+    |            ^^^^^^^^^^^
+
+warning: associated function `new` is never used
+   --> src\models.rs:298:12
+    |
+297 | impl FilterRule {
+    | --------------- associated function in this implementation
+298 |     pub fn new(op: FilterOp) -> Self {
+    |            ^^^
+
+warning: enum `FilterValue` is never used
+   --> src\models.rs:326:10
+    |
+326 | pub enum FilterValue {
+    |          ^^^^^^^^^^^
+
+warning: enum `SortDir` is never used
+   --> src\models.rs:332:10
+    |
+332 | pub enum SortDir {
+    |          ^^^^^^^
+
+warning: struct `TabState` is never constructed
+   --> src\models.rs:337:12
+    |
+337 | pub struct TabState {
+    |            ^^^^^^^^
+
+warning: methods `init_visible_columns`, `get_visible_columns`, and `sample_col_widths` are never used
+   --> src\models.rs:404:12
+    |
+403 | impl TabState {
+    | ------------- methods in this implementation
+404 |     pub fn init_visible_columns(&mut self, schema: &InferredSchema) {
+    |            ^^^^^^^^^^^^^^^^^^^^
+...
+412 |     pub fn get_visible_columns(&self, schema: &InferredSchema) -> Vec<String> {
+    |            ^^^^^^^^^^^^^^^^^^^
+...
+422 |     pub fn sample_col_widths(
+    |            ^^^^^^^^^^^^^^^^^
+
+warning: struct `TabConfig` is never constructed
+   --> src\models.rs:454:12
+    |
+454 | pub struct TabConfig {
+    |            ^^^^^^^^^
+
+warning: struct `AppConfig` is never constructed
+   --> src\models.rs:460:12
+    |
+460 | pub struct AppConfig {
+    |            ^^^^^^^^^
+
+warning: function `val_to_bool` is never used
+   --> src\models.rs:477:8
+    |
+477 | pub fn val_to_bool(v: &serde_json::Value) -> bool {
+    |        ^^^^^^^^^^^
+
+warning: function `record_all_fields` is never used
+   --> src\models.rs:489:8
+    |
+489 | pub fn record_all_fields(record: &JsonRecord) -> Vec<(String, String)> {
+    |        ^^^^^^^^^^^^^^^^^
+
+warning: function `record_title` is never used
+   --> src\models.rs:502:8
+    |
+502 | pub fn record_title(record: &JsonRecord) -> String {
+    |        ^^^^^^^^^^^^
+
+warning: `exphora_db` (bin "exphora_db" test) generated 19 warnings (run `cargo fix --bin "exphora_db" -p exphora_db --tests` to apply 1 suggestion)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.78s
+     Running unittests src\main.rs (target\debug\deps\exphora_db-2657e878e2763b26.exe)
+
+running 41 tests
+test expr::tests::expr_arithmetic ... ok
+test expr::tests::expr_function_len ... ok
+test expr::tests::expr_aggregates ... ok
+test expr::tests::expr_column_ref ... ok
+test expr::tests::expr_string_concat ... ok
+test expr::tests::expr_if_nested ... ok
+test expr::tests::expr_if_true_false ... ok
+test expr::tests::expr_null_on_error ... ok
+test expr::tests::expr_round_and_num ... ok
+test models::tests::easy_filter_all_selected_no_filter ... ok
+test expr::tests::expr_function_upper ... ok
+test models::tests::easy_filter_excludes_value ... ok
+test models::tests::filter_multi_and ... ok
+test models::tests::filter_multi_or ... ok
+test models::tests::stats_null_handling ... ok
+test models::tests::stats_numeric_col ... ok
+test models::tests::stats_text_col ... ok
+test p2p::discovery::tests::parse_invalid_base64 ... ok
+test p2p::discovery::tests::parse_invalid_prefix ... ok
+test p2p::protocol::tests::frame_roundtrip ... ok
+test p2p::nat::tests::stun_discovery_returns_public_addr ... ok
+test p2p::nat::tests::wan_connect_loopback ... ok
+test p2p::store::tests::keypair_roundtrip ... ok
+test p2p::compress::tests::round_trip_sync ... ok
+test p2p::discovery::tests::generate_and_parse_roundtrip ... ok
+test p2p::shard::tests::p2p_pipeline_tampered_manifest_detected ... ok
+test parser::tests::export_markdown_format ... ok
+test p2p::shard::tests::p2p_pipeline_tampered_shard_detected ... ok
+test parser::tests::ndjson_error_on_bad_line ... ok
+test p2p::shard::tests::p2p_pipeline_full ... ok
+test parser::tests::ndjson_round_trip ... ok
+test parser::tests::ndjson_skips_empty_lines ... ok
+test parser::tests::export_json_round_trip ... ok
+test parser::tests::xml_single_record ... ok
+test parser::tests::xml_list_structure ... ok
+test p2p::compress::tests::round_trip_async ... ok
+test p2p::store::tests::round_trip_disk ... ok
+test p2p::store::tests::shard_index_populated ... ok
+test p2p::transfer::tests::tcp_loopback_fetch_shard_ok ... ok
+test p2p::transfer::tests::tcp_loopback_wrong_auth_rejected ... ok
+test p2p::nat::tests::wan_connect_fails_gracefully ... ok
+
+test result: ok. 41 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.06s
+
