@@ -5,6 +5,7 @@ import { useDataset } from "../../hooks/useDataset";
 import { invoke } from "@tauri-apps/api/core";
 import { fromViewState } from "../../types";
 import { RelinkModal } from "../modals/RelinkModal";
+import { useAcceptP2PView } from "../../hooks/useAcceptP2PView";
 
 interface SidebarProps {
     isOpen: boolean;
@@ -20,24 +21,27 @@ export function Sidebar({ isOpen }: SidebarProps) {
     const addTabs = useAppStore((s) => s.addTabs);
     const addRecentView = useAppStore((s) => s.addRecentView);
     const activeTab = tabs.find((t) => t.id === activeTabId);
+    const pendingP2PViews = useAppStore((s) => s.pendingP2PViews);
+    const removePendingP2PView = useAppStore((s) => s.removePendingP2PView);
     const { openPath } = useDataset();
+    const { acceptP2PView } = useAcceptP2PView();
 
     const [savedViews, setSavedViews] = useState<any[]>([]);
     const [relinkViewPath, setRelinkViewPath] = useState<string | null>(null);
 
     const [collapsed, setCollapsed] = useState<{
-        recentFiles: boolean; columns: boolean; views: boolean; recentViews: boolean;
+        recentFiles: boolean; columns: boolean; views: boolean; recentViews: boolean; pendingViews: boolean;
     }>(() => {
         try {
             const stored = localStorage.getItem("sidebar_collapsed_sections");
             const parsed = stored ? JSON.parse(stored) : {};
-            return { recentFiles: false, columns: false, views: false, recentViews: false, ...parsed };
+            return { recentFiles: false, columns: false, views: false, recentViews: false, pendingViews: false, ...parsed };
         } catch {
-            return { recentFiles: false, columns: false, views: false, recentViews: false };
+            return { recentFiles: false, columns: false, views: false, recentViews: false, pendingViews: false };
         }
     });
 
-    const toggleSection = (key: "recentFiles" | "columns" | "views" | "recentViews") => {
+    const toggleSection = (key: "recentFiles" | "columns" | "views" | "recentViews" | "pendingViews") => {
         setCollapsed((prev) => {
             const next = { ...prev, [key]: !prev[key] };
             localStorage.setItem("sidebar_collapsed_sections", JSON.stringify(next));
@@ -276,6 +280,69 @@ export function Sidebar({ isOpen }: SidebarProps) {
                     </div>
                 </div>
             </div>
+
+            {/* Pending P2P Views */}
+            {pendingP2PViews.length > 0 && (
+                <div className="px-3 py-2 flex-1 overflow-y-auto border-t border-zinc-800 min-h-0 bg-zinc-900/50">
+                    <button
+                        className="w-full flex items-center justify-between text-violet-400 text-xs font-semibold mb-1.5 hover:text-violet-300 hover:bg-zinc-800 focus:bg-zinc-800 focus:outline-none px-1 rounded transition-colors group"
+                        onClick={() => toggleSection("pendingViews" as any)}
+                    >
+                        <div className="flex items-center gap-1.5 py-1">
+                            <Clock size={12} />
+                            <span>Vistas P2P Pendientes</span>
+                            <span className="bg-violet-500/20 text-violet-300 px-1.5 py-0.5 rounded-full text-[10px] ml-1">
+                                {pendingP2PViews.length}
+                            </span>
+                        </div>
+                        <ChevronDown size={14} className={`transform transition-transform duration-300 ${collapsed.pendingViews ? "-rotate-90" : ""}`} />
+                    </button>
+                    <div 
+                        className="grid transition-all duration-300 ease-in-out" 
+                        style={{ gridTemplateRows: collapsed.pendingViews ? "0fr" : "1fr" }}
+                    >
+                        <div className="overflow-hidden space-y-2">
+                            {pendingP2PViews.map((item: import("../../store/appStore").PendingP2PView) => {
+                                const msAgo = Date.now() - new Date(item.receivedAt).getTime();
+                                const minAgo = Math.max(1, Math.floor(msAgo / 60000));
+                                
+                                return (
+                                    <div key={item.id} className="bg-zinc-800/80 rounded border border-violet-500/20 p-2 flex flex-col gap-2">
+                                        <div className="flex flex-col">
+                                            <span className="text-zinc-200 text-xs font-medium truncate">{item.tabName}</span>
+                                            <span className="text-zinc-500 text-[10px]">Recibida hace {minAgo} min</span>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button 
+                                                className="flex-1 bg-violet-600 hover:bg-violet-500 text-white rounded text-[10px] py-1 transition-colors"
+                                                onClick={() => {
+                                                    acceptP2PView({
+                                                        tabId: item.tabId,
+                                                        tabName: item.tabName,
+                                                        fetchLink: item.fetchLink,
+                                                        view: item.view,
+                                                        viewNotes: item.viewNotes,
+                                                        columnNotes: item.columnNotes
+                                                    });
+                                                    removePendingP2PView(item.id);
+                                                }}
+                                            >
+                                                Aplicar
+                                            </button>
+                                            <button 
+                                                className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-zinc-300 rounded text-[10px] py-1 transition-colors"
+                                                onClick={() => removePendingP2PView(item.id)}
+                                            >
+                                                Descartar
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {relinkViewPath && (
                 <RelinkModal

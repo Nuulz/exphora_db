@@ -4,6 +4,7 @@ import { X, Share2, Download, Copy, CheckCircle2 } from "lucide-react";
 import { LoadedTab } from "../../types";
 import { useAppStore } from "../../store/appStore";
 import { useFocusTrap } from "../../hooks/useFocusTrap";
+import { useAcceptP2PView } from "../../hooks/useAcceptP2PView";
 
 interface P2PPanelProps {
     onClose: () => void;
@@ -33,6 +34,8 @@ export function P2PPanel({ onClose }: P2PPanelProps) {
 
     const panelRef = React.useRef<HTMLDivElement>(null);
     useFocusTrap(panelRef, true, true, true);
+
+    const { acceptP2PView } = useAcceptP2PView();
 
     const handleShare = async () => {
         if (!activeTab) return;
@@ -117,7 +120,26 @@ export function P2PPanel({ onClose }: P2PPanelProps) {
                     if (result.columnNotes) {
                         uiPatch.columnNotes = result.columnNotes;
                     }
-                    updateTabUi(result.tab.id, uiPatch);
+                    
+                    await acceptP2PView({
+                        tabId: result.tab.id,
+                        tabName: result.tab.name,
+                        fetchLink: fetchLink.trim(),
+                        view: uiPatch,
+                        viewNotes: result.viewNotes || null,
+                        columnNotes: result.columnNotes || null,
+                    });
+                } else {
+                    useAppStore.getState().addPendingP2PView({
+                        id: crypto.randomUUID(),
+                        tabId: result.tab.id,
+                        tabName: result.tab.name,
+                        view: result.view,
+                        viewNotes: result.viewNotes,
+                        columnNotes: result.columnNotes,
+                        receivedAt: new Date().toISOString(),
+                        fetchLink: fetchLink.trim(),
+                    });
                 }
             }
 

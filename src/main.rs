@@ -89,6 +89,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_app_info,
+            commands::get_app_data_dir,
             commands::open_file_dialog,
             commands::load_file,
             commands::save_file,
@@ -103,6 +104,7 @@ fn main() {
             commands::load_view,
             commands::relink_view,
             commands::build_chart_data,
+            commands::check_duplicate_p2p_view,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -56,6 +56,16 @@ pub fn validate_view_file(view_file: &ViewFile) -> Result<(), String> {
     Ok(())
 }
 
+use tauri::Manager;
+
+#[tauri::command]
+pub fn get_app_data_dir(app: tauri::AppHandle) -> Result<String, String> {
+    app.path()
+        .app_data_dir()
+        .map(|p| p.to_string_lossy().to_string())
+        .map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub async fn save_view(
     app: tauri::AppHandle,
@@ -93,7 +103,7 @@ pub async fn save_view(
 
     let created_at = chrono::Utc::now().to_rfc3339();
 
-    let mut view_file = ViewFile {
+    let view_file = ViewFile {
         version: 1,
         app_version: app.package_info().version.to_string(),
         created_at,
@@ -104,6 +114,13 @@ pub async fn save_view(
     };
 
     let json = serde_json::to_string_pretty(&view_file).map_err(|e| e.to_string())?;
+    
+    if let Some(parent) = std::path::Path::new(&actual_path).parent() {
+        if !parent.exists() {
+            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+    }
+
     std::fs::write(&actual_path, json).map_err(|e| e.to_string())?;
 
     Ok(actual_path)
@@ -148,4 +165,36 @@ pub async fn relink_view(
     std::fs::write(&view_file_path, json).map_err(|e| e.to_string())?;
 
     Ok(view_file)
+}
+
+#[tauri::command]
+pub fn check_duplicate_p2p_view(app: tauri::AppHandle, hash: String) -> Result<bool, String> {
+    let app_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let target_dir = app_dir.join("exphora_p2p").join("received_views");
+
+    if !target_dir.exists() {
+        return Ok(false);
+    }
+
+    let entries = match std::fs::read_dir(&target_dir) {
+        Ok(e) => e,
+        Err(_) => return Ok(false),
+    };
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_file() {
+            if let Some(ext) = path.extension() {
+                if ext == "exh" {
+                    if let Ok(content) = std::fs::read_to_string(&path) {
+                        if content.contains(&hash) {
+                            return Ok(true);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(false)
 }

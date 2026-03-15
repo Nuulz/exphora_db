@@ -1,6 +1,17 @@
 import { create } from "zustand";
 import { LoadedTab, TabUiState, defaultTabUiState, RecentViewEntry } from "../types";
 
+export interface PendingP2PView {
+    id: string;
+    tabId: string;
+    tabName: string;
+    view: any;
+    viewNotes: string | null;
+    columnNotes: Record<string, string> | null;
+    receivedAt: string;
+    fetchLink: string;
+}
+
 interface AppState {
     tabs: LoadedTab[];
     activeTabId: string | null;
@@ -9,6 +20,7 @@ interface AppState {
     recentFiles: string[];
     recentViews: RecentViewEntry[];
     isNotesWindowOpen: boolean;
+    pendingP2PViews: PendingP2PView[];
 
     // ── Actions ──────────────────────────────────────────────────────────────
     addTabs: (newTabs: LoadedTab[]) => void;
@@ -19,6 +31,9 @@ interface AppState {
     addRecentFile: (path: string) => void;
     addRecentView: (entry: RecentViewEntry) => void;
     toggleNotesWindow: () => void;
+    
+    addPendingP2PView: (item: PendingP2PView) => void;
+    removePendingP2PView: (id: string) => void;
 
     // Feature: Inline Editing
     startEditing: (tabId: string, rowIndex: number, colName: string) => void;
@@ -48,6 +63,10 @@ export const useAppStore = create<AppState>((set) => {
         recentFiles: [],
         recentViews: initialRecentViews,
         isNotesWindowOpen: false,
+        pendingP2PViews: [],
+
+    addPendingP2PView: (item) => set((s) => ({ pendingP2PViews: [...s.pendingP2PViews, item] })),
+    removePendingP2PView: (id) => set((s) => ({ pendingP2PViews: s.pendingP2PViews.filter(v => v.id !== id) })),
 
     addTabs: (newTabs) =>
         set((s) => {
